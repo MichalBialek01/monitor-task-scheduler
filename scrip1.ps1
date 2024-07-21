@@ -1,16 +1,21 @@
+$monitors = Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorBasicDisplayParams
 
-# Skrypt PowerShell do pobrania czasów wschodu i zachodu słońca i aktualizacji zadań w Harmonogramie Zadań
+if ($monitors.Count -gt 1) {
+    $lat = "51.1079"
+    $lng = "17.0385"
+    $url = "https://api.sunrise-sunset.org/json?lat=$lat&lng=$lng&formatted=0"
+    
+    $response = Invoke-RestMethod -Uri $url
+    $sunrise = [datetime]::Parse($response.results.sunrise).ToLocalTime()
+    $sunset = [datetime]::Parse($response.results.sunset).ToLocalTime()
 
-$apiUrl = "https://api.sunrise-sunset.org/json?lat=51.1079&lng=17.0385&formatted=0"
-$response = Invoke-RestMethod -Uri $apiUrl
+    $current_time = Get-Date
 
-$sunrise = [DateTime]::Parse($response.results.sunrise).ToLocalTime().ToString("HH:mm")
-$sunset = [DateTime]::Parse($response.results.sunset).ToLocalTime().ToString("HH:mm")
+    if ($current_time -ge $sunset -or $current_time -lt $sunrise) {
+        $brightness = 30  # przyciemnić monitor
+    } else {
+        $brightness = 100 # ustawić normalną jasność
+    }
 
-$scriptPath = "C:\Path\To\Your\SecondScript.ps1"
-
-# Aktualizacja lub utworzenie zadania dla wschodu słońca
-schtasks /create /tn "UruchomSkryptOWschodzieSłońca" /tr "powershell.exe -ExecutionPolicy Bypass -File '$scriptPath'" /sc once /st $sunrise /f
-
-# Aktualizacja lub utworzenie zadania dla zachodu słońca
-schtasks /create /tn "UruchomSkryptOZachodzieSłońca" /tr "powershell.exe -ExecutionPolicy Bypass -File '$scriptPath'" /sc once /st $sunset /f
+    & "C:\Path\To\Monitorian.exe" /Set 1 $brightness
+}
